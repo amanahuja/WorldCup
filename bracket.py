@@ -7,8 +7,8 @@ from os.path import join as joinpath
 # TODO: move out of this file
 DATADIR = 'data'
 GROUP_MATCH_FILE = joinpath(DATADIR, 'results_group.json')
-KNOCKOUT_MATCH_FILE = joinpath(DATADIR, 'knockout.json')
 GROUP_RANK_FILE = joinpath(DATADIR, 'grouprank.json')
+KNOCKOUT_MATCH_FILE = joinpath(DATADIR, 'knockout.json')
 SUBMISSIONS_FILE = joinpath(DATADIR, 'submissions.json')
 
 
@@ -34,6 +34,8 @@ class Bracket(object):
         self.tie_breaker = None
 
         if csv_file is not None:
+            # TODO : temp bypass try-catch
+            self.load_from_csv(csv_file)
             try:
                 self.load_from_csv(csv_file)
             except:
@@ -71,19 +73,35 @@ class Bracket(object):
     def get_score(self):
         """Calculate bracket's score"""
 
-        score = 0
-
         # Load results of group games
         with open(GROUP_MATCH_FILE) as infile:
             mr = json.loads(infile.read())
 
+        self.score1 = 0
         for game in self.games:
             if self.games[game] == mr[game]['winner']:
-                score += scoring_rules['groupgame']
+                self.score1 += scoring_rules['groupgame']
 
-        self.score = score
-        return score
+        self.score2 = 0
+        self.score3 = 0
+        with open(GROUP_RANK_FILE) as infile:
+            rr = json.loads(infile.read())
 
+        for group, predictions in self.group_rankings.iteritems():
+            actuals = rr[group]
+
+            # Points for entire group in correct order
+            if predictions == actuals:
+                self.score3 += scoring_rules['grouporder']
+
+            # Points for each team in correct position
+            for ipred, iactual in zip(predictions, actuals):
+                if ipred == iactual:
+                    self.score2 += scoring_rules['grouprank']
+
+        # Update score attributes and return score
+        self.score = self.score1 + self.score2 + self.score3
+        return self.score
 
     # Internal Methods
 
