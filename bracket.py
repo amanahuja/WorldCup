@@ -77,13 +77,14 @@ class Bracket(object):
         with open(GROUP_MATCH_FILE) as infile:
             mr = json.loads(infile.read())
 
-        self.score1 = 0
+        self.scores = {}
+        self.scores['A'] = 0
         for game in self.games:
             if self.games[game] == mr[game]['winner']:
-                self.score1 += scoring_rules['groupgame']
+                self.scores['A'] += scoring_rules['groupgame']
 
-        self.score2 = 0
-        self.score3 = 0
+        self.scores['B'] = 0
+        self.scores['C'] = 0
         with open(GROUP_RANK_FILE) as infile:
             rr = json.loads(infile.read())
 
@@ -92,15 +93,28 @@ class Bracket(object):
 
             # Points for entire group in correct order
             if predictions == actuals:
-                self.score3 += scoring_rules['grouporder']
+                self.scores['C'] += scoring_rules['grouporder']
 
             # Points for each team in correct position
             for ipred, iactual in zip(predictions, actuals):
                 if ipred == iactual:
-                    self.score2 += scoring_rules['grouprank']
+                    self.scores['B'] += scoring_rules['grouprank']
+
+        self.scores['D'] = 0
+        with open(KNOCKOUT_MATCH_FILE) as infile:
+            knockout_results = json.loads(infile.read())
+
+        knockout_rounds = knockout_results.iterkeys()
+        for stage in knockout_rounds:
+            # Points for correct picks
+            #   in each knockout stage
+            picks = set(self.knockout_picks[stage])
+            winners = set(knockout_results[stage])
+            n_matches = len(picks & winners)  # union
+            self.scores['D'] += scoring_rules[stage] * n_matches
 
         # Update score attributes and return score
-        self.score = self.score1 + self.score2 + self.score3
+        self.score = sum(list(self.scores))
         return self.score
 
     # Internal Methods
