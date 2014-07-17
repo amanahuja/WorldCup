@@ -114,7 +114,7 @@ class Bracket(object):
             self.scores['D'] += scoring_rules[stage] * n_matches
 
         # Update score attributes and return score
-        self.score = sum(list(self.scores))
+        self.score = sum(list(self.scores.viewvalues()))
         return self.score
 
     # Internal Methods
